@@ -476,44 +476,70 @@ func recalculateBounds[BoundType any](bounder BoundTraits[BoundType], node *bvhN
 
 // ..............................................
 
+func fixParentPointers[BoundType any](node *bvhNode[BoundType]){
+	if node != nil {
+		for _, child := range(node.children) {
+			childnode, ok := child.(*bvhNode[BoundType])
+			if ok {
+				childnode.parent = node
+			}
+		}
+  }
+}
+
+// ..............................................
+
+//
 func splitNode[BoundType any](bounder BoundTraits[BoundType], node *bvhNode[BoundType], root *bvhNode[BoundType]) {
 	parent := node
-	for parent != nil {
-		if len(parent.children)%16 == 0 && len(parent.children) > 0 {
-			if root == parent {
-				// splitting the root is a special case
-				newnode := bvhNode[BoundType]{
-					children: root.children[:],
-					parent:   root,
-					bound:    root.bound,
-				}
-				root.children = make([]Boundable[BoundType], 0, 8)
-				root.children = append(root.children, &newnode)
-				splitNode(bounder, &newnode, root)
+	for parent != nil && len(parent.children)%16 == 0 && len(parent.children) > 0 {
+		if root == parent {
+			// splitting the root is a special case
+			// move root children to new node:
+			newnode := bvhNode[BoundType]{
+				children: root.children[:],
+				parent:   root,
+				bound:    root.bound,
+			}
+			// fix parent pointers for moved children:
+			fixParentPointers(&newnode)
+
+			// make new children for root and split the new node:
+			root.children = make([]Boundable[BoundType], 0, 8)
+			root.children = append(root.children, &newnode)
+			parent = &newnode
+
+		} else {
+			// splitting a "normal" node, not the root
+		  // assert that parent.parent != nil
+
+			// get opposing corners of the bound:
+			bound0, bound1 := getSplitBounds(bounder, parent)
+
+      // reuse node "parent" as node1, create a new node0
+			node0 := &(bvhNode[BoundType]{parent: parent.parent})
+			node1 := parent
+
+      // divide children of "parent" between node0 and node1
+			node0.children, node1.children = partitionSplit(bounder, parent, bound0, bound1)
+
+			// if a minimally useful split occurred, then commit; otherwise revert:
+			if len(node0.children) > 1 && len(node1.children) > 1 {
+				fixParentPointers(node0)
+			  parent.parent.children = append(parent.parent.children, node0)
+
+				recalculateBounds(bounder, node0)
+				recalculateBounds(bounder, node1)
 
 			} else {
-				// splitting a "normal" node, not the root
-				bound0, bound1 := getSplitBounds(bounder, parent)
+				// revert the node split:
+				node1.children = append(node1.children, node0.children...)
+				break // break for
+			}
 
-				node0 := bvhNode[BoundType]{parent: parent}
-				node1 := bvhNode[BoundType]{parent: parent}
+      parent = parent.parent
+		} // end if root
 
-				node0.children, node1.children = partitionSplit(bounder, parent, bound0, bound1)
-
-				if len(node0.children) > 0 && len(node1.children) > 0 {
-					// parent node gets its own new store:
-					parent.children = parent.children[:0]
-					parent.children = append(parent.children, &node0)
-					parent.children = append(parent.children, &node1)
-
-					recalculateBounds(bounder, &node0)
-					recalculateBounds(bounder, &node1)
-				}
-
-			} // end if root
-		} // end if len > threshold
-
-		parent = parent.parent
 	} // end for
 	return
 }
