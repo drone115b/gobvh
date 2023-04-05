@@ -518,7 +518,6 @@ func splitNode[BoundType any](bounder BoundTraits[BoundType], node *bvhNode[Boun
 			} else {
 				// revert the node split:
 				node1.children = append(node1.children, node0.children...)
-				break // break for
 			}
 
 			parent = parent.parent
