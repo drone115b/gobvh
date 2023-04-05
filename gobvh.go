@@ -215,33 +215,17 @@ func (bvh *BVH[BoundType]) Insert(element Boundable[BoundType]) {
 // It returns a boolean to indicate whether or not the erasure actually occurred.
 //
 func (bvh *BVH[BoundType]) Erase(element Boundable[BoundType]) bool {
-	diderase, erasenode := eraseChild(bvh.boundtraits, &bvh.root, element, element.GetBound())
-	if diderase && erasenode != nil {
-		for erasenode.parent != nil && len(erasenode.children) < 2 {
-			var nodeelement Boundable[BoundType] = erasenode
-			eraseChild(bvh.boundtraits, erasenode.parent, nodeelement, erasenode.bound)
-			for _, child := range erasenode.children {
-				reinsertnode, ok := child.(*bvhNode[BoundType])
-				if ok {
-					// reinsert node, move it to its grandparent
-					erasenode.parent.children = append(erasenode.parent.children, child)
-					reinsertnode.parent = erasenode.parent
-					// grandparent+ancestors' bounds need to be updated, because eraseChild() might have shrunk them
-					updatenode := erasenode.parent
-					for updatenode != nil {
-						updatenode.bound = bvh.boundtraits.Union(updatenode.bound, reinsertnode.bound)
-						updatenode = updatenode.parent
-					} // end for update ancestors' bounds
-				} else {
-					// reinsert element
-					bvh.Insert(child)
-				}
-			} // end for reinsert orphaned elements
-			erasenode.children = erasenode.children[:0]
-			erasenode = erasenode.parent
-		} // for node needs to be compressed
-	} // if did erase successfully
-
+  diderase, erasenode := eraseChild(bvh.boundtraits, &bvh.root, element, element.GetBound())
+	for erasenode != nil {
+		eraseparent := erasenode.parent
+		if eraseparent != nil && len(erasenode.children) == 0 {
+			var toerase Boundable[BoundType] = erasenode
+			eraseChild(bvh.boundtraits, eraseparent, toerase, toerase.GetBound())
+		} else {
+			break
+		}
+		erasenode = eraseparent
+	}
 	return diderase
 }
 
@@ -448,13 +432,13 @@ func eraseChild[BoundType any](bounder BoundTraits[BoundType], parent *bvhNode[B
 			} // end for
 
 			if true == erasedhere {
-				updatenode := parent
+				updatenode := container
 				for updatenode != nil {
 					recalculateBounds(bounder, updatenode)
 					updatenode = updatenode.parent
 				} // end for update ancestors' bounds
 			} // if erased here
-		} // if node boudn intersects element bound
+		} // if node bound intersects element bound
 	} // if parent
 
 	return erased || erasedhere, container
