@@ -180,6 +180,7 @@ func TestBVHNearestNeighbor2D (t *testing.T) {
 	bvh := New(bounder)
 
   // insert integer lattice corners
+	t.Logf("Insert (0 0)-(31 31):\n")
 	for x=0.0; x<32.0; x+=1.0 {
 		for y=0.0; y<32.0; y+=1.0 {
 			bvh.Insert(Point2D{x,y})
@@ -201,6 +202,7 @@ func TestBVHNearestNeighbor2D (t *testing.T) {
 	bvh.ForEach(&cb)
 
   // Erase stuff
+	t.Logf("Erase (1 0)-(31 31):\n")
 	for x=1.0; x<32.0; x+=1.0 {
 		for y=0.0; y<32.0; y+=1.0 {
 			found := simpleNNSearch(t, bvh, Point2D{x+0.1,y+0.1}, Point2D{x,y} , true)
@@ -215,6 +217,27 @@ func TestBVHNearestNeighbor2D (t *testing.T) {
 	t.Logf("Visualization:\n")
 	visualize(t, &(bvh.root), "  " )
 
+  t.Logf("Erase all remaining elements")
+	for y=0.0; y<32.0; y+=1.0 {
+		found := simpleNNSearch(t, bvh, Point2D{0.0,y+0.1}, Point2D{0.0,y} , true)
+		bvh.Erase(found)
+	}
+	if 0 != len(bvh.root.children) {
+		t.Errorf("Expected empty tree, but detecting %d elements", len(bvh.root.children))
+	}
+	bvh.ForEach(&cb) // verify bounds again
+	t.Logf("Visualization:\n")
+	visualize(t, &(bvh.root), "  " )
+
+  t.Logf("Insert (0, 0)-(0 31)")
+	for y=0.0; y<32.0; y+=1.0 {
+		bvh.Insert(Point2D{0.0,y})
+	}
+	bvh.ForEach(&cb) // verify bounds again
+	t.Logf("Visualization:\n")
+	visualize(t, &(bvh.root), "  " )
+
+  t.Logf("Erase all remaining elements")
 	for y=0.0; y<32.0; y+=1.0 {
 		found := simpleNNSearch(t, bvh, Point2D{0.0,y+0.1}, Point2D{0.0,y} , true)
 		bvh.Erase(found)
