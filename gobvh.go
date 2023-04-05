@@ -215,7 +215,7 @@ func (bvh *BVH[BoundType]) Insert(element Boundable[BoundType]) {
 // It returns a boolean to indicate whether or not the erasure actually occurred.
 //
 func (bvh *BVH[BoundType]) Erase(element Boundable[BoundType]) bool {
-  diderase, erasenode := eraseChild(bvh.boundtraits, &bvh.root, element, element.GetBound())
+	diderase, erasenode := eraseChild(bvh.boundtraits, &bvh.root, element, element.GetBound())
 	for erasenode != nil {
 		eraseparent := erasenode.parent
 		if eraseparent != nil && len(erasenode.children) == 0 {
@@ -460,15 +460,15 @@ func recalculateBounds[BoundType any](bounder BoundTraits[BoundType], node *bvhN
 
 // ..............................................
 
-func fixParentPointers[BoundType any](node *bvhNode[BoundType]){
+func fixParentPointers[BoundType any](node *bvhNode[BoundType]) {
 	if node != nil {
-		for _, child := range(node.children) {
+		for _, child := range node.children {
 			childnode, ok := child.(*bvhNode[BoundType])
 			if ok {
 				childnode.parent = node
 			}
 		}
-  }
+	}
 }
 
 // ..............................................
@@ -495,22 +495,22 @@ func splitNode[BoundType any](bounder BoundTraits[BoundType], node *bvhNode[Boun
 
 		} else {
 			// splitting a "normal" node, not the root
-		  // assert that parent.parent != nil
+			// assert that parent.parent != nil
 
 			// get opposing corners of the bound:
 			bound0, bound1 := getSplitBounds(bounder, parent)
 
-      // reuse node "parent" as node1, create a new node0
+			// reuse node "parent" as node1, create a new node0
 			node0 := &(bvhNode[BoundType]{parent: parent.parent})
 			node1 := parent
 
-      // divide children of "parent" between node0 and node1
+			// divide children of "parent" between node0 and node1
 			node0.children, node1.children = partitionSplit(bounder, parent, bound0, bound1)
 
 			// if a minimally useful split occurred, then commit; otherwise revert:
 			if len(node0.children) > 1 && len(node1.children) > 1 {
 				fixParentPointers(node0)
-			  parent.parent.children = append(parent.parent.children, node0)
+				parent.parent.children = append(parent.parent.children, node0)
 
 				recalculateBounds(bounder, node0)
 				recalculateBounds(bounder, node1)
@@ -521,7 +521,7 @@ func splitNode[BoundType any](bounder BoundTraits[BoundType], node *bvhNode[Boun
 				break // break for
 			}
 
-      parent = parent.parent
+			parent = parent.parent
 		} // end if root
 
 	} // end for
@@ -594,8 +594,8 @@ func furthestDistanceMetric[BoundType any](bounder BoundTraits[BoundType], first
 		lo0, hi0 := bounder.IntervalRange(first, i)
 		lo1, hi1 := bounder.IntervalRange(second, i)
 
-		var n float64 = math.Min(hi0 - lo1, hi1 - lo0)
-		var m float64 = math.Max(hi0 - lo1, hi1 - lo0)
+		var n float64 = math.Min(hi0-lo1, hi1-lo0)
+		var m float64 = math.Max(hi0-lo1, hi1-lo0)
 
 		if n >= 0.0 {
 			doesintersect = true
